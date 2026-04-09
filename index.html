@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAKSUT NURZHAN // NEXUS BEYOND v7</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@100;400&family=Outfit:wght@100;400;900&family=Unbounded:wght@200;900&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==========================================================================
+        1. АРХИТЕКТУРА ПЕРЕМЕННЫХ (CSS VARIABLES)
+        ==========================================================================
+        */
+        :root {
+            --bg-deep: #010103;
+            --accent-primary: #00f2ff;
+            --accent-secondary: #7000ff;
+            --accent-tertiary: #ff00c8;
+            --text-main: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.4);
+            --glass-bg: rgba(0, 0, 0, 0.5);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --transition-fluid: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+            --font-display: 'Unbounded', sans-serif;
+            --font-body: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        /* ==========================================================================
+        2. ФУНДАМЕНТАЛЬНЫЙ СБРОС (RESET)
+        ==========================================================================
+        */
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            cursor: none !important; /* Нативный курсор отключен */
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            height: 100vh; width: 100vw;
+            overflow: hidden;
+        }
+
+        /* ==========================================================================
+        3. КУРСОР "SENTINEL X"
+        ==========================================================================
+        */
+        #cursor-core {
+            position: fixed; width: 10px; height: 10px; background: #fff;
+            border-radius: 50%; pointer-events: none; z-index: 10000;
+            mix-blend-mode: difference; transition: transform 0.1s linear;
+        }
+
+        #cursor-ring {
+            position: fixed; width: 50px; height: 50px; border: 1.5px solid var(--accent-primary);
+            border-radius: 50%; pointer-events: none; z-index: 9999;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+                        width 0.3s, height 0.3s, border-color 0.3s;
+        }
+
+        /* ==========================================================================
+        4. МНОГОСЛОЙНАЯ СИСТЕМА ФОНОВ (MULTILAYER BG)
+        ==========================================================================
+        */
+        .bg-system {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2;
+        }
+
+        /* Основной слой изображений (меняется через JS) */
+        #bg-image-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover; background-position: center;
+            filter: brightness(0.2) contrast(1.2);
+            transition: background-image 1s ease-in-out;
+        }
+
+        /* Слой частиц поверх изображения */
+        #particles-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0.3;
+        }
+
+        /* Эффекты: сетка, шум, виньетка */
+        .scanlines {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 3px 100%; pointer-events: none;
+        }
+
+        .noise {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://grainy-gradients.vercel.app/noise.svg');
+            opacity: 0.03; pointer-events: none;
+        }
+
+        .vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 40%, black 140%);
+            pointer-events: none;
+        }
+
+        /* ==========================================================================
+        5. ХЕДЕР (CONTROL PANEL)
+        ==========================================================================
+        */
+        .os-nav {
+            position: fixed; top: 0; width: 100%; height: 80px;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 60px; z-index: 5000;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .brand {
+            font-family: var(--font-display); font-size: 16px; letter-spacing: 5px;
+            display: flex; align-items: center; gap: 15px; color: var(--accent-primary);
+        }
+
+        .status-pulse {
+            width: 8px; height: 8px; background: var(--accent-primary); border-radius: 50%;
+            box-shadow: 0 0 15px var(--accent-primary); animation: pulse 2s infinite;
+        }
+
+        .nav-links { display: flex; gap: 10px; background: rgba(255,255,255,0.02); padding: 5px; border-radius: 50px; border: 1px solid var(--glass-border); }
+        .nav-btn {
+            padding: 12px 28px; border-radius: 40px; font-size: 11px; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 2px; transition: var(--transition-fluid);
+            color: var(--text-dim); position: relative; overflow: hidden;
+        }
+        .nav-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        
+        /* ЦВЕТНАЯ НАВИГАЦИЯ */
+        .nav-btn.active[data-view="home"] { color: #000; background: var(--accent-primary); box-shadow: 0 0 25px var(--accent-primary); }
+        .nav-btn.active[data-view="tech"] { color: #fff; background: var(--accent-secondary); box-shadow: 0 0 25px var(--accent-secondary); }
+        .nav-btn.active[data-view="debug"] { color: #fff; background: #00ff00; box-shadow: 0 0 25px #00ff00; }
+        .nav-btn.active[data-view="signal"] { color: #fff; background: var(--accent-tertiary); box-shadow: 0 0 25px var(--accent-tertiary); }
+
+        /* ==========================================================================
+        6. КОНТЕНТНЫЕ ОКНА (VIEWPORT)
+        ==========================================================================
+        */
+        .main-stage {
+            width: 100%; height: 100vh; padding-top: 80px; position: relative;
+        }
+
+        .view-frame {
+            position: absolute; top: 80px; left: 0; width: 100%;
+            height: calc(100vh - 80px); padding: 80px 10%;
+            opacity: 0; visibility: hidden; transform: perspective(1000px) rotateX(10deg) translateY(50px);
+            transition: var(--transition-fluid); overflow-y: auto;
+        }
+
+        .view-frame.active {
+            opacity: 1; visibility: visible; transform: perspective(1000px) rotateX(0deg) translateY(0);
+        }
+
+        /* --- СЕКЦИЯ: CORE (HOME) --- */
+        .hero-layout {
+            display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 80px; align-items: center;
+        }
+
+        .hero-title {
+            font-family: var(--font-display); font-size: clamp(2rem, 8vw, 6rem); line-height: 0.8;
+            margin-bottom: 30px; font-weight: 900;
+        }
+
+        .hero-desc {
+            font-size: 22px; color: var(--text-dim); max-width: 600px;
+            margin-bottom: 50px; position: relative; padding-left: 20px;
+            border-left: 3px solid var(--accent-secondary);
+        }
+
+        .data-card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            padding: 40px; border-radius: 40px; backdrop-filter: blur(20px);
+            transition: var(--transition-fluid);
+        }
+        .data-card:hover { transform: translateY(-10px); border-color: var(--accent-primary); }
+
+        .stat-line { display: flex; justify-content: space-between; margin-bottom: 25px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; }
+        .stat-label { font-family: var(--font-mono); font-size: 10px; color: var(--accent-primary); text-transform: uppercase; }
+
+        /* --- СЕКЦИЯ: TECH (SKILLS) --- */
+        .skills-container {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px;
+        }
+
+        .skill-box {
+            background: var(--glass-bg); backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border); padding: 50px 40px;
+            border-radius: 30px; transition: 0.4s ease;
+        }
+        .skill-box:hover { background: rgba(0, 242, 255, 0.05); border-color: var(--accent-primary); }
+
+        .meter { height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 15px; overflow: hidden; }
+        .meter-fill { height: 100%; background: var(--accent-primary); width: 0; transition: width 2s cubic-bezier(0.19, 1, 0.22, 1); }
+
+        /* --- ТЕРМИНАЛ (DEBUG CONSOLE) --- */
+        .terminal-window {
+            background: rgba(0,0,0,0.9); border: 1px solid var(--accent-primary);
+            border-radius: 20px; height: 600px; display: flex; flex-direction: column;
+            box-shadow: 0 0 50px rgba(0, 242, 255, 0.1); overflow: hidden;
+        }
+
+        .term-top { padding: 15px 25px; border-bottom: 1px solid var(--glass-border); display: flex; gap: 8px; background: rgba(255,255,255,0.05); }
+        .t-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+        .term-body { flex-grow: 1; padding: 30px; font-family: var(--font-mono); overflow-y: auto; color: var(--accent-primary); font-size: 14px; }
+        .term-input-line { padding: 20px 30px; border-top: 1px solid var(--glass-border); display: flex; gap: 15px; }
+        #term-input { background: transparent; border: none; outline: none; color: #fff; width: 100%; font-family: inherit; }
+
+        /* --- КОНТАКТЫ (SIGNAL TRANSMISSION) --- */
+        .signal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; }
+        .contact-item {
+            background: var(--glass-bg); backdrop-filter: blur(10px);
+            padding: 40px; border-radius: 25px; border: 1px solid var(--glass-border);
+            display: flex; align-items: center; gap: 30px; text-decoration: none; color: inherit; transition: 0.3s;
+        }
+        .contact-item:hover { transform: scale(1.03); border-color: var(--accent-tertiary); background: rgba(255, 0, 200, 0.05); }
+
+        .form-wrap { background: var(--glass-bg); backdrop-filter: blur(10px); padding: 60px; border-radius: 40px; border: 1px solid var(--glass-border); }
+        .f-group { margin-bottom: 30px; }
+        .f-group label { display: block; font-size: 10px; color: var(--accent-primary); letter-spacing: 3px; margin-bottom: 15px; text-transform: uppercase; }
+        .f-group input, .f-group textarea {
+            width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);
+            padding: 20px; border-radius: 12px; color: #fff; font-family: var(--font-body); outline: none;
+        }
+        .f-group input:focus { border-color: var(--accent-primary); }
+
+        /* ==========================================================================
+        7. ФУТЕР (SYSTEM TICKER)
+        ==========================================================================
+        */
+        .os-footer {
+            position: fixed; bottom: 0; width: 100%; height: 40px;
+            background: var(--accent-primary); display: flex; align-items: center;
+            overflow: hidden; z-index: 5000;
+        }
+
+        .ticker-scroll { display: flex; white-space: nowrap; animation: ticker 60s linear infinite; }
+        .ticker-msg { color: #000; font-family: var(--font-mono); font-size: 12px; font-weight: 900; padding: 0 60px; text-transform: uppercase; }
+
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--accent-primary); border-radius: 10px; }
+
+    </style>
+</head>
+<body onload="initOS()">
+
+    <div id="cursor-core"></div>
+    <div id="cursor-ring"></div>
+
+    <div class="bg-system">
+        <div id="bg-image-layer"></div> <canvas id="particles-canvas"></canvas>
+        <div class="noise"></div>
+        <div class="scanlines"></div>
+        <div class="vignette"></div>
+    </div>
+
+    <header class="os-nav">
+        <div class="brand">
+            <div class="status-pulse"></div>
+            MAKSUT_NURZHAN_v7.0
+        </div>
+        <nav class="nav-links">
+            <div class="nav-btn active" data-view="home" onclick="switchView('home', this)">[ 01_CORE ]</div>
+            <div class="nav-btn" data-view="tech" onclick="switchView('tech', this)">[ 02_TECH ]</div>
+            <div class="nav-btn" data-view="debug" onclick="switchView('debug', this)">[ 03_DEBUG ]</div>
+            <div class="nav-btn" data-view="signal" onclick="switchView('signal', this)">[ 04_SIGNAL ]</div>
+        </nav>
+        <div id="os-time" style="font-family: var(--font-mono); font-size: 12px;">00:00:00</div>
+    </header>
+
+    <main class="main-stage">
+        
+        <section id="home" class="view-frame active">
+            <div class="hero-layout">
+                <div>
+                    <span style="font-family: var(--font-mono); color: var(--accent-primary); font-size: 14px; letter-spacing: 5px;">> INITIALIZING_IDENTITY...</span>
+                    <h1 class="hero-title">MAKSUT<br><span style="color:var(--accent-primary);">NURZHAN</span></h1>
+                    <p class="hero-desc">
+                        Мне 16 лет. Я — архитектор цифровых интерфейсов и исследователь нейронных сетей. Моя работа заключается в проектировании будущего, где код превращается в искусство.
+                    </p>
+                    <div style="display: flex; gap: 25px;">
+                        <button class="nav-btn active" style="padding: 20px 50px; background: var(--accent-primary); color: #000;" onclick="switchView('signal', null)">CONNECT_SYSTEM</button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="data-card">
+                        <h3 style="font-family: var(--font-display); font-size: 14px; margin-bottom: 30px;">SUBJECT_DATA</h3>
+                        <div class="stat-line"><span class="stat-label">Identity</span><span>Maksut N.</span></div>
+                        <div class="stat-line"><span class="stat-label">Biological_Age</span><span>16_Cycles</span></div>
+                        <div class="stat-line"><span class="stat-label">Core_Skills</span><span>JS / Python / UI</span></div>
+                        <div class="stat-line"><span class="stat-label">Location</span><span>Kazakhstan</span></div>
+                        <div class="stat-line" style="border: none; margin: 0;">
+                            <span class="stat-label">Mail_Protocol</span>
+                            <span style="font-size: 14px; color: var(--accent-primary);">uing241@gmail.com</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tech" class="view-frame">
+            <h2 style="font-family: var(--font-display); font-size: 40px; margin-bottom: 60px;">CAPABILITIES_MATRIX</h2>
+            <div class="skills-container">
+                <div class="skill-box">
+                    <div class="skill-icon" style="color: var(--accent-primary); font-family: var(--font-mono);">JS</div>
+                    <h3>FRONTEND_CORE</h3>
+                    <p style="font-size: 13px; color: var(--text-dim); margin-top: 10px;">React, Next.js, Framer Motion. Создание SPA-приложений.</p>
+                    <div class="meter"><div class="meter-fill" data-width="92%"></div></div>
+                </div>
+                <div class="skill-box">
+                    <div class="skill-icon" style="color: var(--accent-secondary); font-family: var(--font-mono);">PY</div>
+                    <h3>BACKEND_LOGIC</h3>
+                    <p style="font-size: 13px; color: var(--text-dim); margin-top: 10px;">FastAPI, Django, PostgreSQL. Системная архитектура.</p>
+                    <div class="meter"><div class="meter-fill" data-width="78%"></div></div>
+                </div>
+                <div class="skill-box">
+                    <div class="skill-icon" style="color: var(--accent-tertiary); font-family: var(--font-mono);">UI</div>
+                    <h3>CYBER_DESIGN</h3>
+                    <p style="font-size: 13px; color: var(--text-dim); margin-top: 10px;">Figma, 3D WebGL, Motion Graphics. Футуристичный дизайн.</p>
+                    <div class="meter"><div class="meter-fill" data-width="88%"></div></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="debug" class="view-frame">
+            <div class="terminal-window">
+                <div class="term-top">
+                    <div class="t-dot" style="background: #ff5f56;"></div>
+                    <div class="t-dot" style="background: #ffbd2e;"></div>
+                    <div class="t-dot" style="background: #27c93f;"></div>
+                    <span style="font-family: var(--font-mono); font-size: 10px; margin-left: 20px; opacity: 0.5;">SSH: admin@maksut_core - Terminal_v7.0</span>
+                </div>
+                <div class="term-body" id="term-output">
+                    <div>[SYSTEM] Maksut OS Kernel v7.0.1 initialized.</div>
+                    <div>[SYSTEM] Connected to node: KZ_KOKSHETAU_SERVER</div>
+                    <div>[SYSTEM] Welcome, Operator. Security level: MAXIMUM.</div>
+                    <div>[SYSTEM] Type 'help' to list available commands.</div>
+                    <br>
+                </div>
+                <div class="term-input-line">
+                    <span style="color: var(--accent-secondary); font-weight: bold;">root@nexus_~#</span>
+                    <input type="text" id="term-input" autocomplete="off" spellcheck="false">
+                </div>
+            </div>
+        </section>
+
+        <section id="signal" class="view-frame">
+            <div class="signal-grid">
+                <div>
+                    <h2 style="font-family: var(--font-display); font-size: 40px; margin-bottom: 30px;">SIGNAL_TRANS</h2>
+                    <p style="color: var(--text-dim); margin-bottom: 40px;">Система готова к приему входящих данных. Выберите канал связи.</p>
+                    
+                    <a href="https://t.me/Rappturee" class="contact-item">
+                        <div style="font-size: 30px; color: var(--accent-primary);">✈</div>
+                        <div>
+                            <h4 style="font-size: 10px; color: var(--accent-primary); letter-spacing: 2px;">TELEGRAM_ENCRYPTED</h4>
+                            <p style="font-size: 20px; font-weight: 700;">@Rappturee</p>
+                        </div>
+                    </a>
+                    <br>
+                    <div class="contact-item">
+                        <div style="font-size: 30px; color: var(--accent-tertiary);">✉</div>
+                        <div>
+                            <h4 style="font-size: 10px; color: var(--accent-tertiary); letter-spacing: 2px;">SECURE_EMAIL</h4>
+                            <p style="font-size: 20px; font-weight: 700;">uing241@gmail.com</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-wrap">
+                    <form onsubmit="return false">
+                        <div class="f-group"><label>NAME_ID</label><input type="text" placeholder="Entry name..."></div>
+                        <div class="f-group"><label>PROTOCOL_EMAIL</label><input type="email" placeholder="email@address.com"></div>
+                        <div class="f-group"><label>DATA_PAYLOAD</label><textarea rows="5" placeholder="Введите сообщение..."></textarea></div>
+                        <button class="nav-btn active" style="width: 100%; height: 60px; font-size: 14px; background: var(--accent-tertiary); color: #fff; box-shadow: 0 0 20px var(--accent-tertiary);">TRANSMIT_DATA</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="os-footer">
+        <div class="ticker-scroll">
+            <div class="ticker-msg">MAKSUT NURZHAN // AGE: 16 // DEVELOPER</div>
+            <div class="ticker-msg">TG: @RAPPTUREE // MAIL: UING241@GMAIL.COM</div>
+            <div class="ticker-msg">SYSTEM STATUS: OPTIMAL // SECURITY: ACTIVE</div>
+            <div class="ticker-msg">LOCATION: KZ // PROTOCOL_7</div>
+            <div class="ticker-msg">MAKSUT NURZHAN // AGE: 16 // DEVELOPER</div>
+            <div class="ticker-msg">TG: @RAPPTUREE // MAIL: UING241@GMAIL.COM</div>
+        </div>
+    </footer>
+
+    <script>
+        /* 1. ФОНОВЫЕ ИЗОБРАЖЕНИЯ (МЕНЯЮТСЯ С КАЖДОЙ ВКЛАДКОЙ) */
+        const backgrounds = {
+            home: 'https://images.unsplash.com/photo-1510511459019-5dee595dc93b?q=80&w=1920', // Киберпунк, синий
+            tech: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1920', // Платы, синий
+            debug: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1920', // Железо, ретро
+            signal: 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=1920' // Космос, звезды
+        };
+
+        const bgLayer = document.getElementById('bg-image-layer');
+
+        function setBackground(id) {
+            if (backgrounds[id]) {
+                bgLayer.style.backgroundImage = `url(${backgrounds[id]})`;
+            }
+        }
+
+        /* 2. CURSOR ENGINE */
+        const core = document.getElementById('cursor-core');
+        const ring = document.getElementById('cursor-ring');
+
+        document.addEventListener('mousemove', (e) => {
+            const { clientX: x, clientY: y } = e;
+            core.style.transform = `translate(${x}px, ${y}px)`;
+            ring.animate({
+                transform: `translate(${x - 25}px, ${y - 25}px)`
+            }, { duration: 600, fill: 'forwards' });
+        });
+
+        /* 3. NAVIGATION ENGINE */
+        function switchView(id, btn) {
+            document.querySelectorAll('.view-frame').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(id).classList.add('active');
+            if(btn) btn.classList.add('active');
+
+            // Меняем фон при переключении
+            setBackground(id);
+
+            // Анимация скилл-баров при переключении
+            if(id === 'tech') {
+                setTimeout(() => {
+                    document.querySelectorAll('.meter-fill').forEach(fill => {
+                        fill.style.width = fill.getAttribute('data-width');
+                    });
+                }, 400);
+            }
+        }
+
+        /* 4. CLOCK LOGIC */
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('os-time').innerText = now.toLocaleTimeString('ru-RU');
+        }, 1000);
+
+        /* 5. PARTICLES BACKGROUND ENGINE */
+        const canvas = document.getElementById('particles-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const particleCount = 100;
+
+        window.onresize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+        window.onresize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.6;
+                this.vy = (Math.random() - 0.5) * 0.6;
+                this.size = Math.random() * 2 + 1;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(0, 242, 255, 0.4)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < particleCount; i++) particles.push(new Particle());
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        /* 6. TERMINAL SYSTEM ENGINE */
+        const tIn = document.getElementById('term-input');
+        const tOut = document.getElementById('term-output');
+
+        tIn.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const cmd = tIn.value.toLowerCase().trim();
+                const l = document.createElement('div');
+                l.innerHTML = `<span style="color:var(--accent-secondary)">> ${cmd}</span>`;
+                tOut.appendChild(l);
+                
+                const r = document.createElement('div');
+                r.style.marginBottom = '15px';
+
+                if (cmd === 'help') {
+                    r.innerHTML = "Available commands: [whoami], [tech], [contact], [clear], [status], [location]";
+                } else if (cmd === 'whoami') {
+                    r.innerHTML = "SUBJECT: Maksut Nurzhan | AGE: 16 | STATUS: Developer | LOC: KZ";
+                } else if (cmd === 'status') {
+                    r.innerHTML = "CORE: Stable | CONNECTION: Encrypted | AI_NODES: Active";
+                } else if (cmd === 'tech') {
+                    r.innerHTML = "STACK: JavaScript (React), Python (FastAPI), WebGL.";
+                } else if (cmd === 'contact') {
+                    r.innerHTML = "TG: @Rappturee | MAIL: uing241@gmail.com";
+                } else if (cmd === 'location') {
+                    r.innerHTML = "GEO_NODE: Kokshetau, Akmola Region, Kazakhstan.";
+                } else if (cmd === 'clear') {
+                    tOut.innerHTML = '';
+                    r.innerHTML = '';
+                } else {
+                    r.innerHTML = `Command '${cmd}' not recognized. Type 'help' for info.`;
+                }
+
+                tOut.appendChild(r);
+                tIn.value = '';
+                tOut.scrollTop = tOut.scrollHeight;
+            }
+        });
+
+        /* 7. INITIALIZE */
+        function initOS() {
+            setBackground('home'); // Ставим стартовый фон
+        }
+
+    </script>
+</body>
+</html>
